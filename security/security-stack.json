@@ -1,0 +1,148 @@
+{
+  "AWSTemplateFormatVersion":"2010-09-09",
+  "Description":"Kavak Moodle Security Stack",
+  "Parameters":{
+    "DbMasterUsername":{
+      "Type":"String",
+      "Description":"The master username for the DB Secret"
+    },
+    "VpcId":{
+      "Type":"String",
+      "Description":"Public Subnet Id"
+    },
+    "AllowedSshIpRange":{
+      "Type":"String",
+      "Description":"The valid Ip Rage to allow ssh to instances",
+      "Default":"0.0.0.0/0"
+    },
+    "DomainName":{
+      "Type":"String",
+      "Description":"Domain name to be used by CloudFront",
+      "Default":""
+    },
+    "DomainFlag":{
+      "Type":"String",
+      "Default":"false",
+      "AllowedValues":[
+        "false",
+        "true"
+      ],
+      "Description":"Indicates if a domain name should be attached to the CloudFront distribution"
+    }
+  },
+  "Conditions":{
+    "DomainUsageTrue":{
+      "Fn::Equals":[
+        {
+          "Ref":"DomainFlag"
+        },
+        "true"
+      ]
+    },
+    "DomainUsageFalse":{
+      "Fn::Equals":[
+        {
+          "Ref":"DomainFlag"
+        },
+        "false"
+      ]
+    }
+  },
+  "Resources":{
+    "DbSecret":{
+      "Type":"AWS::SecretsManager::Secret",
+      "Properties":{
+        "Name":{
+          "Fn::Sub":"${AWS::StackName}/database"
+        },
+        "Description":"DB Password Management",
+        "GenerateSecretString":{
+          "SecretStringTemplate":{
+            "Fn::Sub":"{\"username\": \"${DbMasterUsername}\"}"
+          },
+          "GenerateStringKey":"password",
+          "PasswordLength":30,
+          "ExcludeCharacters":"\"@/\\;^.-$~()[]|{}='*&`¿?!¡+<>:,#%"
+        }
+      }
+    },
+    "DbSecurityGroup":{
+      "Type":"AWS::EC2::SecurityGroup",
+      "Properties":{
+        "GroupDescription":"Enable database communication",
+        "VpcId":{
+          "Ref":"VpcId"
+        },
+        "Tags":[
+          {
+            "Key":"Name",
+            "Value":{
+              "Fn::Join":[
+                "-",
+                [
+                  {
+                    "Ref":"AWS::StackName"
+                  },
+                  "db-sg"
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "DbIngressRule":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"DbSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "FromPort":"27017",
+        "ToPort":"27017",
+        "SourceSecurityGroupId":{
+          "Ref":"DbSecurityGroup"
+        }
+      }
+    },
+    "AcmCertificate":{
+      "Type":"AWS::CertificateManager::Certificate",
+      "Condition":"DomainUsageTrue",
+      "Properties":{
+        "DomainName":{
+          "Fn::Join":[
+            ".",
+            [
+              "*",
+              {
+                "Ref":"DomainName"
+              }
+            ]
+          ]
+        },
+        "ValidationMethod":"DNS"
+      }
+    }
+  },
+  "Outputs":{
+    "DbSecretId":{
+      "Description":"The Id for the DB Secret",
+      "Value":{
+        "Ref":"DbSecret"
+      }
+    },
+    "DbSecurityGroupId":{
+      "Description":"The database Security Group Id",
+      "Value":{
+        "Ref":"DbSecurityGroup"
+      }
+    },
+    "ACMCertificateArn":{
+      "Condition":"DomainUsageTrue",
+      "Description":"The ACM Certificate ARN to configure in the CloudFront distribution",
+      "Value":{
+        "Ref":"AcmCertificate"
+      }
+    }
+  }
+}

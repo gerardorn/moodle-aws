@@ -1,0 +1,7 @@
+Options +FollowSymlinks
+RewriteEngine on
+rewriterule ^moodledata/(.*)$ {DOMAIN_NAME}/$1 [r=301,nc]
+
+# BEGIN WordPress
+
+# END WordPress

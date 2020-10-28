@@ -1,0 +1,92 @@
+{
+  "AWSTemplateFormatVersion":"2010-09-09",
+  "Description":"Kavak Moodle Data Stack",
+  "Parameters":{
+    "DbSecretId":{
+      "Type":"String",
+      "Description":"The Secret Id holding db credentials"
+    },
+    "DbSubnetGroupName":{
+      "Type":"String",
+      "Description":"The db subnet group name"
+    }
+  },
+  "Resources":{
+    "RdsDbClusterParameterGroup":{
+      "Type":"AWS::RDS::DBClusterParameterGroup",
+      "Properties":{
+        "Description":"CloudFormation Sample Aurora Cluster Parameter Group",
+        "Family":"aurora5.6",
+        "Parameters":{
+          "time_zone":"US/Eastern"
+        }
+      }
+    },
+    "RdsCluster":{
+      "Type":"AWS::RDS::DBCluster",
+      "Properties":{
+        "MasterUsername":{
+          "Fn::Sub":"{{resolve:secretsmanager:${DbSecretId}::username}}"
+        },
+        "MasterUserPassword":{
+          "Fn::Sub":"{{resolve:secretsmanager:${DbSecretId}::password}}"
+        },
+        "Engine":"aurora",
+        "DBSubnetGroupName":{
+          "Ref":"DbSubnetGroupName"
+        },
+        "DBClusterParameterGroupName":{
+          "Ref":"RdsDbClusterParameterGroup"
+        }
+      }
+    },
+    "RDSDBInstance1":{
+      "Type":"AWS::RDS::DBInstance",
+      "Properties":{
+        "DBSubnetGroupName":{
+          "Ref":"DbSubnetGroupName"
+        },
+        "Engine":"aurora",
+        "DBClusterIdentifier":{
+          "Ref":"RdsCluster"
+        },
+        "PubliclyAccessible":"false",
+        "DBInstanceClass":"db.t2.small"
+      }
+    },
+    "RDSDBInstance2":{
+      "Type":"AWS::RDS::DBInstance",
+      "Properties":{
+        "DBSubnetGroupName":{
+          "Ref":"DbSubnetGroupName"
+        },
+        "Engine":"aurora",
+        "DBClusterIdentifier":{
+          "Ref":"RdsCluster"
+        },
+        "PubliclyAccessible":"false",
+        "DBInstanceClass":"db.t2.small"
+      }
+    }
+  },
+  "Outputs":{
+    "DbClusterWriteEndpoint":{
+      "Description":"The write Endpoint for the Cluster created",
+      "Value":{
+        "Fn::GetAtt":[
+          "RdsCluster",
+          "Endpoint.Address"
+        ]
+      }
+    },
+    "DbClusterReadEndpoint":{
+      "Description":"The read Endpoint for the Cluster created",
+      "Value":{
+        "Fn::GetAtt":[
+          "RdsCluster",
+          "ReadEndpoint.Address"
+        ]
+      }
+    }
+  }
+}

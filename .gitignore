@@ -1,0 +1,5 @@
+packaged.json
+codebuild_build.sh
+artifacts
+vars.env
+
