@@ -1,4 +1,4 @@
-# Kavak Moodle Test
+# Moodle Test
 
 ## Requirements
 Implement the e-learning web tool "Moodle" using an automated deploy process. Deployment must include:
